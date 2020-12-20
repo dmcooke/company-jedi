@@ -77,7 +77,8 @@
 
 (defun company-jedi-annotation (candidate)
   "Return company annotation string for a CANDIDATE."
-  (format "[%s]" (get-text-property 0 :symbol candidate)))
+  (let ((annotation (get-text-property 0 :symbol candidate)))
+    (format "[%s]" (substring annotation 0 (min 1 (length annotation))))))
 
 (defun company-jedi-doc-buffer (candidate)
   "Return a company documentation buffer from a CANDIDATE."
