@@ -44,6 +44,36 @@
   "Completion back-end for Python JEDI."
   :group 'company)
 
+;; The kinds available in `company-vscode-icons-mapping' is somewhat
+;; deficient; I've chosen what makes some sense.
+(defvar company-jedi-kind-alist
+  '(("module" . module)
+    ("class" . class)
+    ("instance" . reference)
+    ("function" . function)
+    ("param" . variable)
+    ("path" . text)
+    ("property" . property)
+    ("keyword" . keyword)
+    ("statement" . constant)
+    ("m" . module)
+    ("c" . class)
+    ("i" . reference)
+    ("f" . function)
+    ;; The unpatched jediepcserver.py, instead of returning the whole
+    ;; word, returns only the first letter.  As you can see this
+    ;; causes a 'p'roblem.
+    ("p" . variable)
+    ("k" . keyword)
+    ("s" . constant))
+  "Alist mapping the 'kind' of the completion symbol to an element in
+the `company-vscode-icons-mapping' alist.
+
+The keys with length 1 are returned by an older jediepcserver.py, which
+truncated the kind to one letter, which is a bit of \"p\"roblem as the
+param, path, and property kinds all become \"p\".")
+
+
 (defun company-jedi-prefix ()
   "Get a prefix from current position."
   (company-grab-symbol-cons "\\." 2))
@@ -68,7 +98,7 @@
   (deferred:nextc
     (jedi:call-deferred 'complete)
     (lambda (reply)
-      (let ((candidates (mapcar 'company-jedi-collect-candidates reply)))
+      (let ((candidates (mapcar #'company-jedi-collect-candidates reply)))
         (funcall callback candidates)))))
 
 (defun company-jedi-meta (candidate)
@@ -78,6 +108,11 @@
 (defun company-jedi-annotation (candidate)
   "Return company annotation string for a CANDIDATE."
   (format "[%s]" (get-text-property 0 :symbol candidate)))
+
+(defun company-jedi-kind (candidate)
+  "Return the kind for a CANDIDATE."
+  (let ((kind (get-text-property 0 :symbol candidate)))
+    (or (cdr-safe (assoc-string kind company-jedi-kind-alist)) t)))
 
 (defun company-jedi-doc-buffer (candidate)
   "Return a company documentation buffer from a CANDIDATE."
@@ -93,9 +128,10 @@ Provide completion info according to COMMAND and ARG."
     (prefix (and (derived-mode-p 'python-mode)
                  (not (company-in-string-or-comment))
                  (or (company-jedi-prefix) 'stop)))
-    (candidates (cons :async 'company-jedi-candidates))
+    (candidates (cons :async #'company-jedi-candidates))
     (meta (company-jedi-meta arg))
-    (annotation (company-jedi-annotation arg))
+    (kind (company-jedi-kind arg))
+    ;;(annotation (company-jedi-annotation arg))
     (doc-buffer (company-jedi-doc-buffer arg))
     (location nil)
     (sorted t)))
